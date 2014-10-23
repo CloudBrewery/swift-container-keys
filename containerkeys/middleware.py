@@ -118,9 +118,6 @@ class ContainerKeys(object):
         # Thundercats are GO. Tell us not to continue authorization down the
         # stream.
         #
-        def _noop_authorize(req):
-            return None
-        env['swift.authorize'] = _noop_authorize
         env['swift.authorize_override'] = True
 
         return self.app(env, start_response)
