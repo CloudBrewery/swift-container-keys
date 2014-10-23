@@ -45,7 +45,7 @@ def get_container_keys_from_metadata(meta):
     """
     Extracts the container keys from metadata.
 
-    :param meta: account metadata
+    :param meta: container metadata
     :returns: dict of keys found (possibly empty if no keys set)
     """
     keys = {}
