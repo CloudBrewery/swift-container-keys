@@ -85,6 +85,9 @@ class ContainerKeys(object):
 
         # Start by passing through based on the least amount of processing
         # possible to regular auth.
+        if env.get('HTTP_X_AUTH_TOKEN', False):
+            # user is trying standard auth, continue the request per usual.
+            return self.app(env, start_response)
 
         try_key_type, try_key_value = self._get_request_key_headers(env)
 
