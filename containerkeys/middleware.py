@@ -55,7 +55,7 @@ def generate_valid_metadata_keynames(key_name, max_keys):
     """
     cmp_key = key_name.lower()
     valid_keynames = [
-        "%s%s" % (cmp_key, i + 1) for i in xrange(0, MAX_KEYS)]
+        "%s-%s" % (cmp_key, i + 1) for i in xrange(0, max_keys)]
     return [cmp_key, ] + valid_keynames
 
 
