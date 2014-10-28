@@ -26,6 +26,7 @@ Read-Key will only accept GET requests, not POST/PUT/DELETE, which would be
 supported by Full-Key.
 """
 
+from collections import defaultdict
 
 from swift.common import utils as swift_utils
 from swift.common.swob import HTTPUnauthorized
@@ -34,11 +35,24 @@ from swift.proxy.controllers.base import get_container_info
 
 FULL_KEY = 'Full-Key'
 READ_KEY = 'Read-Key'
+DEPRECATED_POSTFIX = '-Deprecated'
 
 FULL_KEY_HEADER = 'HTTP_X_CONTAINER_META_FULL_KEY'
 READ_KEY_HAEDER = 'HTTP_X_CONTAINER_META_READ_KEY'
 
 READ_RESTRICTED_METHODS = ['PUT', 'POST', 'DELETE']
+
+
+def generate_valid_metadata_keynames(key_name):
+    """
+    Generates a set of valid key names stored in a container's metadata to
+    include in results
+
+    :param key_name: base key (unprefixed)
+    :returns: set of names of keys that are valid.
+    """
+    cmp_key_name = key_name.lower()
+    return (cmp_key_name, "%s%s" % (cmp_key_name, DEPRECATED_POSTFIX))
 
 
 def get_container_keys_from_metadata(meta):
@@ -48,13 +62,17 @@ def get_container_keys_from_metadata(meta):
     :param meta: container metadata
     :returns: dict of keys found (possibly empty if no keys set)
     """
-    keys = {}
+    keys = defaultdict(list)
+    full_keys = generate_valid_metadata_keynames(FULL_KEY)
+    read_keys = generate_valid_metadata_keynames(READ_KEY)
+
     for key, value in meta.iteritems():
         v = swift_utils.get_valid_utf8_str(value)
-        if key.lower() == FULL_KEY.lower():
-            keys[FULL_KEY] = v
-        elif key.lower() == READ_KEY.lower():
-            keys[READ_KEY] = v
+        cmp_key = key.lower()
+        if cmp_key in full_keys:
+            keys[FULL_KEY].append(v)
+        elif cmp_key in read_keys:
+            keys[READ_KEY].append(v)
     return keys
 
 
@@ -105,7 +123,7 @@ class ContainerKeys(object):
         # Begin marking requests as invalid, a user actually want to try now.
         #
         if try_key_type == READ_KEY:
-            if keys.get(READ_KEY) != try_key_value:
+            if try_key_value not in keys.get(READ_KEY):
                 # invalid key
                 return self._invalid(env, start_response)
 
@@ -113,7 +131,8 @@ class ContainerKeys(object):
                 # read keys cannot do non-read actions
                 return self._invalid(env, start_response)
 
-        elif try_key_type == FULL_KEY and keys.get(FULL_KEY) != try_key_value:
+        elif (try_key_type == FULL_KEY
+                and try_key_value not in keys.get(FULL_KEY)):
             # invalid full key
             return self._invalid(env, start_response)
 
