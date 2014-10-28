@@ -19,11 +19,15 @@ Container Keys Middleware
 Allows for access to containers based on a simple key rather than requiring
 a user to supply Keystone credentials, and embed them in their application.
 
-
 Container keys supports two keys, specifically X-Container-Meta-Full-Key and
 X-Container-Meta-Read-Key. Whichever is supplied will be authenticated against.
 Read-Key will only accept GET requests, not POST/PUT/DELETE, which would be
 supported by Full-Key.
+
+Multiple keys can be set per container, of the following format:
+    X-Container-Meta-[Full|Read](-[1-9])?
+The maximum number of keys that are checked is configurable, and can be used
+to implement multiple valid keys per container, or a key recycling policy.
 """
 
 from collections import defaultdict
