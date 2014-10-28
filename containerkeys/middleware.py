@@ -35,7 +35,7 @@ from swift.proxy.controllers.base import get_container_info
 
 FULL_KEY = 'Full-Key'
 READ_KEY = 'Read-Key'
-DEPRECATED_POSTFIX = '-Deprecated'
+MAX_KEYS = 3  # Make this configurable
 
 FULL_KEY_HEADER = 'HTTP_X_CONTAINER_META_FULL_KEY'
 READ_KEY_HAEDER = 'HTTP_X_CONTAINER_META_READ_KEY'
@@ -49,10 +49,12 @@ def generate_valid_metadata_keynames(key_name):
     include in results
 
     :param key_name: base key (unprefixed)
-    :returns: set of names of keys that are valid.
+    :returns: list of names of keys that are valid.
     """
-    cmp_key_name = key_name.lower()
-    return (cmp_key_name, "%s%s" % (cmp_key_name, DEPRECATED_POSTFIX))
+    cmp_key = key_name.lower()
+    valid_keynames = [
+        "%s%s" % (cmp_key, i + 1) for i in xrange(0, MAX_KEYS)]
+    return [cmp_key, ] + valid_keynames
 
 
 def get_container_keys_from_metadata(meta):
@@ -74,6 +76,20 @@ def get_container_keys_from_metadata(meta):
         elif cmp_key in read_keys:
             keys[READ_KEY].append(v)
     return keys
+
+
+def key_matches(to_match, keys):
+    """
+    Checks whether the to_match key is in the list of keys. This leverages
+    the swift streq_const_time string comparator to guard against timing
+    attacks.
+
+    :param to_match: a key to check contains
+    :param keys: a list of keys to compare against
+    :returns: boolean
+    """
+    return any(
+        [swift_utils.streq_const_time(to_match, key) for key in keys])
 
 
 class ContainerKeys(object):
@@ -123,7 +139,7 @@ class ContainerKeys(object):
         # Begin marking requests as invalid, a user actually want to try now.
         #
         if try_key_type == READ_KEY:
-            if try_key_value not in keys.get(READ_KEY):
+            if not key_matches(try_key_value, keys.get(READ_KEY)):
                 # invalid key
                 return self._invalid(env, start_response)
 
@@ -132,7 +148,7 @@ class ContainerKeys(object):
                 return self._invalid(env, start_response)
 
         elif (try_key_type == FULL_KEY
-                and try_key_value not in keys.get(FULL_KEY)):
+                and not key_matches(try_key_value, keys.get(FULL_KEY))):
             # invalid full key
             return self._invalid(env, start_response)
 
