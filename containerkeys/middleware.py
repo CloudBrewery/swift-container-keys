@@ -35,20 +35,22 @@ from swift.proxy.controllers.base import get_container_info
 
 FULL_KEY = 'Full-Key'
 READ_KEY = 'Read-Key'
-MAX_KEYS = 3  # Make this configurable
 
 FULL_KEY_HEADER = 'HTTP_X_CONTAINER_META_FULL_KEY'
 READ_KEY_HAEDER = 'HTTP_X_CONTAINER_META_READ_KEY'
 
 READ_RESTRICTED_METHODS = ['PUT', 'POST', 'DELETE']
 
+DEFAULT_MAX_KEYS_PER_CONTAINER = 3
 
-def generate_valid_metadata_keynames(key_name):
+
+def generate_valid_metadata_keynames(key_name, max_keys):
     """
     Generates a set of valid key names stored in a container's metadata to
     include in results
 
     :param key_name: base key (unprefixed)
+    :param max_keys: max number of valid keys
     :returns: list of names of keys that are valid.
     """
     cmp_key = key_name.lower()
@@ -57,16 +59,17 @@ def generate_valid_metadata_keynames(key_name):
     return [cmp_key, ] + valid_keynames
 
 
-def get_container_keys_from_metadata(meta):
+def get_container_keys_from_metadata(meta, max_keys):
     """
     Extracts the container keys from metadata.
 
     :param meta: container metadata
+    :param max_keys: max number of valid keys to check on a container
     :returns: dict of keys found (possibly empty if no keys set)
     """
     keys = defaultdict(list)
-    full_keys = generate_valid_metadata_keynames(FULL_KEY)
-    read_keys = generate_valid_metadata_keynames(READ_KEY)
+    full_keys = generate_valid_metadata_keynames(FULL_KEY, max_keys)
+    read_keys = generate_valid_metadata_keynames(READ_KEY, max_keys)
 
     for key, value in meta.iteritems():
         v = swift_utils.get_valid_utf8_str(value)
@@ -102,10 +105,11 @@ class ContainerKeys(object):
     :param conf: The configuration dict for the middleware.
     """
 
-    def __init__(self, app, conf):
+    def __init__(self, app, conf, max_keys_per_container=DEFAULT_MAX_KEYS_PER_CONTAINER):
 
         self.app = app
         self.conf = conf
+        self.max_keys_per_container = max_keys_per_container
         self.logger = swift_utils.get_logger(conf, log_route='containerkeys')
 
     def __call__(self, env, start_response):
@@ -179,7 +183,7 @@ class ContainerKeys(object):
 
     def _get_container_keys(self, env, account):
         """
-        Returns the X-Container-Meta-[Full|Read]-Key header values for the
+        Returns the X-Container-Meta-[Full|Read]-Key-[N]? header values for the
         container, or an empty dict if none are set.
 
         :param env: The WSGI environment for the request.
@@ -187,7 +191,8 @@ class ContainerKeys(object):
         :returns: {key_type: key_value}
         """
         container_info = get_container_info(env, self.app, swift_source='CK')
-        return get_container_keys_from_metadata(container_info['meta'])
+        return get_container_keys_from_metadata(container_info['meta'],
+                                                self.max_keys_per_container)
 
     def _invalid(self, env, start_response):
         """
@@ -210,9 +215,16 @@ def filter_factory(global_conf, **local_conf):
     conf = global_conf.copy()
     conf.update(local_conf)
 
-    swift_utils.register_swift_info('containerkeys')
+    max_keys_per_container = int(conf.get('max_keys_per_container',
+                                          DEFAULT_MAX_KEYS_PER_CONTAINER))
+
+    swift_utils.register_swift_info(
+        'containerkeys',
+        max_keys_per_container=max_keys_per_container)
 
     def auth_filter(app):
-        return ContainerKeys(app, conf)
+        return ContainerKeys(
+            app, conf,
+            max_keys_per_container=max_keys_per_container)
 
     return auth_filter
