@@ -99,6 +99,26 @@ def key_matches(to_match, keys):
         [swift_utils.streq_const_time(to_match, key) for key in keys])
 
 
+def extract_request_keys(env):
+    """
+    Returns the key attempting to be used for the request by appearance in
+    the request headers
+
+    :param env: The WSGI environment for the request.
+    :returns: key type, key value
+    """
+
+    headers = env.keys()
+
+    if FULL_KEY_HEADER in headers:
+        return FULL_KEY, env.get(FULL_KEY_HEADER)
+    elif READ_KEY_HAEDER in headers:
+        return READ_KEY, env.get(READ_KEY_HAEDER)
+
+    return None, None
+
+
+
 class ContainerKeys(object):
     """
     WSGI Middleware to grant access to containers based on pre-defined
@@ -131,7 +151,7 @@ class ContainerKeys(object):
             # user is trying standard auth, continue the request per usual.
             return self.app(env, start_response)
 
-        try_key_type, try_key_value = self._get_request_key_headers(env)
+        try_key_type, try_key_value = extract_request_keys(env)
 
         if not try_key_value or not try_key_type:
             # if no headers were attempted, pass through to keystone
@@ -167,23 +187,6 @@ class ContainerKeys(object):
         env['swift.authorize_override'] = True
 
         return self.app(env, start_response)
-
-    def _get_request_key_headers(self, env):
-        """
-        Returns the key attempting to be used for the request
-
-        :param env: The WSGI environment for the request.
-        :returns: key type, key value
-        """
-
-        headers = env.keys()
-
-        if FULL_KEY_HEADER in headers:
-            return FULL_KEY, env.get(FULL_KEY_HEADER)
-        elif READ_KEY_HAEDER in headers:
-            return READ_KEY, env.get(READ_KEY_HAEDER)
-
-        return None, None
 
     def _get_container_keys(self, env, account):
         """

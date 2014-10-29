@@ -52,3 +52,28 @@ class TestContainerKeyUtils(base.TestCase):
         self.assertTrue('asdf' in keys.get(middleware.FULL_KEY))
         self.assertTrue('fdsa' in keys.get(middleware.FULL_KEY))
         self.assertFalse('nope nope nope' in keys.get(middleware.FULL_KEY))
+
+    def test_extract_request_with_readkeys(self):
+        env = {'HTTP_X_CONTAINER_META_READ_KEY': 'readkey'}
+
+        found_key, found_key_value = middleware.extract_request_keys(env)
+
+        self.assertEquals(middleware.READ_KEY, found_key)
+        self.assertEquals('readkey', found_key_value)
+
+
+    def test_extract_request_with_fullkeys(self):
+        env = {'HTTP_X_CONTAINER_META_FULL_KEY': 'fullkey'}
+        found_key, found_key_value = middleware.extract_request_keys(env)
+
+        self.assertEquals(middleware.FULL_KEY, found_key)
+        self.assertEquals('fullkey', found_key_value)
+
+    def test_extract_request_with_bothkeys(self):
+        env = {
+            'HTTP_X_CONTAINER_META_FULL_KEY': 'fullkey',
+            'HTTP_X_CONTAINER_META_READ_KEY': 'readkey'}
+        found_key, found_key_value = middleware.extract_request_keys(env)
+
+        self.assertEquals(middleware.FULL_KEY, found_key)
+        self.assertEquals('fullkey', found_key_value)
