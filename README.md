@@ -50,3 +50,24 @@ Test accessing your container using your new keys using `curl`
     < HTTP/1.1 401 Unauthorized
     < 
     401 Unauthorized: Auth Key invalid
+
+# Internal Structure
+
+We store key data in Container Metadata, and it can contain any number of full and read keys to match.
+
+```
+Full-Key
+Full-Key-1
+Full-Key-2
+Read-Key
+Read-Key-1
+```
+
+which translates to the following structure on read:
+
+```
+{FULL: ['x', 'x1'],
+ READ: ['y', 'y1']}
+```
+
+and validity is checked through an IN comparator. This allows for multiple read and full keys to exist on the container, and be checked by the middleware. The logic for deprecating and moving API key values is not part of the authentication middleware, and is to be implemented at the dashboard / application level.
