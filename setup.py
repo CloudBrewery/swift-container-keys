@@ -1,4 +1,4 @@
-# Copyright (c) 2014 Cloud-A Computing (clouda.ca)
+# Copyright (c) 2015 Cloud Brewery Inc. (cloudbrewery.io)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -25,8 +25,8 @@ setup(
     license='Apache License (2.0)',
     classifiers=['Programming Language :: Python'],
     keywords='container api auth authentication openstack',
-    author='Cloud-A Computing',
-    author_email='adam@clouda.ca',
+    author='Adam Thurlow / Cloud Brewery',
+    author_email='thurloat@gmail.com',
     packages=find_packages(),
     entry_points={
         'paste.filter_factory': [
