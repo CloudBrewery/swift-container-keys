@@ -1,3 +1,7 @@
 *.pyc
 *.egg-info
 .ropeproject/
+
+.coverage
+.tox
+.testrepository
